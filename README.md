@@ -14,5 +14,7 @@ Usage:
 7. Run web server, open http://localhost/index_ups.php and add some UPS in format UPS_name@host ;
 8. Run get_ups_list_mysql.cmd ;
 9. Check UPS info ;
-10. If something's not working, check some checks in others.
+10. If something's not working, check some checks in others.\
+
+<img src="https://github.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/blob/master/scrshts/NUT_webserver_main_if.png"/>
 
