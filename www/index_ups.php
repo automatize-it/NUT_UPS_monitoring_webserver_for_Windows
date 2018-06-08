@@ -1,3 +1,8 @@
+<meta http-equiv="refresh" content="30">
+
+<script type="text/javascript" src="jq/jquery.js"></script> 
+<script type="text/javascript" src="jq/jquery.tablesorter.js"></script> 
+
 <style type="text/css">
 	
 	.upsstr {
@@ -68,8 +73,17 @@
 		valign: middle;
 		text-align: center;
 		min-height: 30pt;
-		width: 5%;
+		min-width: 2%;
 		background: #f0f0f0;
+	}
+	
+	.smlfnt{
+		
+		font-size: 9pt;
+	}
+	
+	tr.border_bottom td {
+		border-bottom: 3pt solid white;
 	}
 	
 	
@@ -81,20 +95,23 @@
 		<input type="submit" value="ADD NEW"/>
 	</form>
 	</div>
-	<table class="maintbl">
-	<tr>
+	<table class="maintbl tablesorter" id="tbl">
+	<thead><tr>
 		<th class="maintblhdr">NAME</th>
-		<th class="maintblhdr">BATTERY %</th>
+		<th class="maintblhdr">BATT V curr/min</th>
+		<th class="maintblhdr">BATT % curr/min</th>
 		<th class="maintblhdr">IN VOLTAGE</th>
 		<th class="maintblhdr">IN FREQ</th>
 		<th class="maintblhdr">BATT DATE</th>
-		<th class="maintblhdr">CURR LOAD</th>
+		<th class="maintblhdr">LOAD curr/max</th>
 		<th class="maintblhdr">STATUS</th>
+		<th class="maintblhdr">PWR LOSS last</th>
+		<th class="maintblhdr">PWR LOSS max</th>
 		<th class="maintblhdr">SLF-TST STAT</th>
 		<th class="maintblhdr">LAST UPDATE</th>
 		<th class="maintblhdr">slftst</th>
-	</tr>
-	
+	</tr></thead>
+	<tbody>
 	<?php
 		$mndb = new mysqli('localhost', 'root', 'password', 'ups_list');
 
@@ -125,32 +142,143 @@
 
 		foreach ($upsnms as $upsnm) {
 			
-			//echo "<br>$upsnm"; 'battery.charge', 'input.voltage', 'input.frequency', 'battery.date', 'ups.load',
+			//echo "<br>$upsnm"; 'battery.charge','battery.voltage', 'input.voltage', 'input.frequency', 'battery.date', 'ups.load',
 			//'ups.status', 'ups.test.result'
 			$result = $mndb->query("SELECT * FROM `$upsnm` ORDER BY id DESC LIMIT 1");
-			echo "<tr><td class=\"maincll\"><b>$upsnm</b></td>";
-			
-			$vlkeys = array('battery.charge', 'input.voltage', 'input.frequency', 'battery.date', 'ups.load', 'ups.status', 'ups.test.result','ts');
-			
 			$keyarr = $result->fetch_assoc();
+			$result->free();
+			$result->close();
+			
+			$result = $mndb->query("SELECT MIN(NULLIF(`battery.voltage`,0)) FROM `$upsnm`");
+			$minv = $result->fetch_array();
+			$minv[0] = round($minv[0], 1); 
+			$result->free();
+			$result->close();
+			
+			$result = $mndb->query("SELECT MIN(NULLIF(`battery.charge`,0)) FROM `$upsnm`");
+			$minbch = $result->fetch_array();
+			$result->free();
+			$result->close();
+			
+			$result = $mndb->query("SELECT MAX(`ups.load`) FROM `$upsnm`");
+			$maxl = $result->fetch_array();
+			$result->free();
+			$result->close();
+			
+			
+			echo "<tr class=\"border_bottom\"><td class=\"maincll\"><b>$upsnm</b></td>";
+			
+			$vlkeys = array('battery.voltage','battery.charge', 'input.voltage', 'input.frequency', 'battery.date', 'ups.load', 'ups.status', 'ups.test.result','ts');
+			
+			//if ( $keyarr['battery.mfr.date'] != NULL) { $vlkeys[4] = 'battery.mfr.date'; }
 				
 			foreach ($vlkeys as $vlkey){
-				echo "<td class=\"maincll\">$keyarr[$vlkey]</td>";
+				
+				if ($vlkey == "battery.voltage" || $vlkey == "battery.charge" || $vlkey == "ups.load" || $vlkey == "ups.status"){
+					
+					if ($vlkey == "battery.voltage") {
+						echo "<td class=\"maincll\">";
+						if ($keyarr[$vlkey] != NULL ){
+							echo "$keyarr[$vlkey] / $minv[0]";
+						}
+						echo "</td>";;
+					} 
+					if ($vlkey == "battery.charge") {echo "<td class=\"maincll\">$keyarr[$vlkey] / $minbch[0]</td>";}
+					if ($vlkey == "ups.load") {
+						echo "<td class=\"maincll\">$keyarr[$vlkey] / ";
+						if ($maxl[0] >= 80) {echo "<span style=\"background-color:#ff0000\">$maxl[0]</span>";}
+						else {echo "$maxl[0]";}
+						if ( $keyarr[$vlkey] != $maxl[0] && $maxl[0] > 50 ){
+							$result = $mndb->query("SELECT `$upsnm`.`ups.load`,COUNT(*) FROM `$upsnm` WHERE `$upsnm`.`ups.load`=$maxl[0]");
+							$maxlcnt = $result->fetch_array();
+							$result->free();
+							$result->close();
+							
+							echo " ($maxlcnt[1])";
+						}
+						echo "</td>";
+					}
+					
+					if ($vlkey == "ups.status") {
+						
+						echo "<td class=\"maincll\">$keyarr[$vlkey]</td>";
+						
+						echo "<td class=\"maincll smlfnt\">";
+						
+						
+						$result = $mndb->query("SELECT `ups.status`,`ts`,`ups.test.result`  FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' ORDER BY ts DESC LIMIT 1");
+						$tmparr = $result->fetch_array();
+						$result->free();
+						$result->close();
+						
+						if ($tmparr['ups.status'] != NULL){
+							$upsstat = $tmparr['ups.status'];
+							$ts = $tmparr['ts'];
+							$tstres = $tmparr['ups.test.result'];
+							
+							//unset($tmparr);
+							$result = $mndb->query("SELECT `ts` FROM `$upsnm` WHERE `ts` > '$ts' AND `ups.status` LIKE 'OL%' ORDER BY ts ASC LIMIT 1");
+							
+							$tmparr = $result->fetch_array();
+							$result->free();
+							$result->close();
+							$tmpss =  strtotime($tmparr[0])- strtotime($ts);
+							$tmstmpstr = gmdate('i:s', $tmpss);
+							
+							echo "$ts $tmstmpstr<br>slftst: $tstres"; //$upsstat<br>
+						}
+						echo "</td>";
+						echo "<td class=\"maincll smlfnt\">";
+						if ($upsstat != NULL){
+							
+							$result = $mndb->query("SELECT t1.ts,ABS(TIMESTAMPDIFF(SECOND,t1.ts,t2.ts)) AS 'secdiff' FROM `$upsnm` AS t1 JOIN `$upsnm` AS t2 on t1.id=t2.id+1 WHERE t1.`ups.status` LIKE 'OL%' AND t2.`ups.status` LIKE 'OB%' ORDER BY 2 DESC");
+							
+							$tmparr = $result->fetch_array();
+							$result->free();
+							$result->close();
+							$tsmax = $tmparr['ts']; $onbattmax = gmdate('i:s', $tmparr['secdiff']);
+							
+							echo "$tsmax $onbattmax";
+							
+							$upsstat = NULL;
+							//print_r ($tmparr);
+						}
+						
+						echo "</td>";
+					}
+				}
+				else {
+					
+					echo "<td class=\"maincll\">$keyarr[$vlkey]</td>";
+				}
 			}
 			
-				
 			/* free result set */
 			$result->free();
 			$result->close();
 			
-			echo "<td class=\"maincll\"><button>SELF-TEST</td></tr>";
-			echo "<tr><td colspan=\"10\"><hr width=\"85%\"></td></tr>";
+			if ($keyarr['ups.test.result'] != NULL) {echo "<td class=\"maincll\"><form method=\"get\"><button type=\"submit\" formaction=\"ups_self_test.php\" name=\"tstups\" value=\"$upsnm\">SELF-TEST</form></td></tr>";}
+			else {echo "<td class=\"maincll\">N/A</td></tr>";}
+			//echo "<tr><td colspan=\"10\"><hr width=\"85%\"></td></tr>";
 		}
 		
 		mysqli_close($mndb);
 	?>
+	</tbody>
 	
 	</table>
+	
+	<script type="text/javascript">
+	$(document).ready(function() 
+    { 
+       $("table").tablesorter({ 
+        // sort on the first column and third column, order asc 
+        sortList: [[11,1],[0,0]] 
+    });
+    } 
+	);
+	</script>
+	
 	<!--
 	<div class="wrapper">
 		<div class="upsstr hdr">
