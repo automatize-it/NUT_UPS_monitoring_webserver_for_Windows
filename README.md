@@ -16,5 +16,5 @@ Usage:
 9. Check UPS info ;
 10. If something's not working, check some checks in others.\
 
-<img src="https://github.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/blob/master/scrshts/NUT_webserver_main_if.png"/>
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/NUT_webserver_main_if_08-06-18.png"/>
 
