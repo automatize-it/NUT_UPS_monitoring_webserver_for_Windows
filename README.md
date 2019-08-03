@@ -8,9 +8,9 @@ NUT monitoring UPS in local network. Just monitoring yet.
 + added automatic UPS analytics (check it)
 + added database optimization
 + added UPS monitoring suspension/return
-V interface reorganized
-V fixed on-battery time calculations
-V optimizations and minor changes
++ interface reorganized
++ fixed on-battery time calculations
++ optimizations and minor changes
 
 Feel free to ask any questions.
 
