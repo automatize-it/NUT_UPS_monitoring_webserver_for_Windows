@@ -2,8 +2,10 @@ battery.charge: 100
 battery.charge.low: 10
 battery.charge.warning: 30
 battery.date: 2010/01/01
+battery.mfr.date: 2010/01/01
 battery.runtime: 2432
 battery.type: PbAc
+battery.voltage:
 device.mfr: POWERCOM Co.,LTD
 device.model:   UPS  IMP--525AP FW3.A2
 device.serial: 3A2-0000-0001
@@ -13,8 +15,6 @@ driver.parameter.bus
 driver.parameter.pollfreq: 30
 driver.parameter.pollinterval: 2
 driver.parameter.port: auto
-driver.parameter.productid: 00a2
-driver.parameter.vendorid: 0d9f
 driver.version: Windows-v2.6.5-5-7-g72f380c
 driver.version.data: PowerCOM HID 0.4
 driver.version.internal: 0.38

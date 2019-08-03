@@ -5,7 +5,7 @@
 	
 	echo $ups;
 	
-	$cmdstr = "C:\NUT\bin\upscmd -u admin -p password $ups test.battery.start.quick";
+	$cmdstr = "C:\NUT\bin\upscmd -u admin -p mypass $ups test.battery.start.quick";
 	
 	exec($cmdstr, $cmdout); //.escapeshellarg($dir) 
 	
@@ -15,4 +15,9 @@
 		echo $str;
 	} 
 	
+	sleep(1);
+	$cmdstr = "get_remote_ups_data.cmd $ups";
+	exec($cmdstr, $cmdout);
+		
+	echo "<meta http-equiv=\"refresh\" content=\"1; url=http://localhost/index_ups.php\">";
 ?>

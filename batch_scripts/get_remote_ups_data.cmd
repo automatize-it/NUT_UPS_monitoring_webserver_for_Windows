@@ -2,14 +2,29 @@
 SETLOCAL ENABLEDELAYEDEXPANSION
 
 SET UPSNAME=%1
+SET HOSTNAME=
 SET KEYS=id,ts,
 SET RAWDATA=
-rem SET ERRCOM=0
+SET UPSNOTOL=0
+SET BMFRD=0
+
+FOR /f "tokens=2 delims=@" %%H IN ('ECHO %UPSNAME%') DO SET HOSTNAME=%%H
+
+:: CHECK FOR HOST AVAILABILITY
+etimeout 2000 bin\upsc %UPSNAME%
+
+IF %ERRORLEVEL% NEQ 0 GOTO :HOSTUNAVLBL 
+
+:: HOST AVAILABLE, GET INFO
 for /f "tokens=1,2 delims=:" %%I IN ('bin\upsc %UPSNAME%') DO (
 	
 	find "%%I" standart_fieldset.txt /C>nul
-	IF !ERRORLEVEL!==0 SET KEYS=!KEYS!`%%I` && SET KEYS=!KEYS!, && SET RAWDATA=!RAWDATA!'%%J' && SET RAWDATA=!RAWDATA!,
+	IF !ERRORLEVEL!==0 IF %%I NEQ device.type SET KEYS=!KEYS!`%%I` && SET KEYS=!KEYS!, && SET RAWDATA=!RAWDATA!'%%J' && SET RAWDATA=!RAWDATA!,
+	IF !ERRORLEVEL!==0 IF %%I==device.type SET KEYS=!KEYS!`%%I` && SET KEYS=!KEYS!, && SET RAWDATA=!RAWDATA!'!HOSTNAME!' && SET RAWDATA=!RAWDATA!,
+	IF %%I==ups.status IF "%%J" NEQ " OL" SET UPSNOTOL=1
+	IF !ERRORLEVEL!==1 IF %%I==battery.mfr.date SET KEYS=!KEYS!`%%I` && SET KEYS=!KEYS!, && SET RAWDATA=!RAWDATA!0000-00-00 && SET RAWDATA=!RAWDATA!,
 )
+
 
 SET RAWDATA=%RAWDATA:~0,-1%
 SET KEYS=%KEYS:~0,-2%
@@ -20,4 +35,13 @@ SET RAWDATA=NULL,now(),%RAWDATA%
 
 SET QRY=INSERT INTO `%UPSNAME%` (%KEYS%) VALUES (%RAWDATA%);
 
-mysql.exe -e "%QRY%" -h localhost --user=root --password=pass ups_list
+mysql.exe -e "%QRY%" -h localhost --user=root --password=mypass ups_list
+IF %UPSNOTOL% NEQ 0 EXIT 12
+exit 0
+
+
+:HOSTUNAVLBL
+::MIND LANGUAGE. CHANGE "мс" TO YOUR LANGUAGE
+ping -n 2 -w 100 %HOSTNAME% | find "мс"
+IF %ERRORLEVEL%==0 exit 11
+exit 0

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Хост: 127.0.0.1:3306
--- Время создания: Май 08 2018 г., 13:57
+-- Время создания: Авг 03 2019 г., 12:37
 -- Версия сервера: 5.6.35
 -- Версия PHP: 7.1.1
 
@@ -17,7 +17,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- База данных: `ups_list_example`
+-- База данных: `srvc`
 --
 
 -- --------------------------------------------------------
@@ -32,9 +32,11 @@ CREATE TABLE `main` (
   `battery.charge` int(11) NOT NULL,
   `battery.charge.low` int(11) NOT NULL,
   `battery.charge.warning` int(11) NOT NULL,
-  `battery.date` date NOT NULL,
+  `battery.date` date DEFAULT NULL,
+  `battery.mfr.date` date DEFAULT NULL,
   `battery.runtime` int(11) NOT NULL,
   `battery.type` text NOT NULL,
+  `battery.voltage` float NOT NULL,
   `device.mfr` text NOT NULL,
   `device.model` text NOT NULL,
   `device.serial` text NOT NULL,
@@ -49,7 +51,7 @@ CREATE TABLE `main` (
   `driver.version` text NOT NULL,
   `driver.version.data` text NOT NULL,
   `driver.version.internal` text NOT NULL,
-  `input.frequency` int(11) NOT NULL,
+  `input.frequency` int(11) DEFAULT NULL,
   `input.voltage` int(11) NOT NULL,
   `input.voltage.nominal` int(11) NOT NULL,
   `output.frequency` int(11) NOT NULL,
