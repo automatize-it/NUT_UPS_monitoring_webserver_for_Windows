@@ -4,6 +4,17 @@ Web server for Network UPS Tools (UPS) https://networkupstools.org/ Windows vers
 
 NUT monitoring UPS in local network. Just monitoring yet.
 
+08.2019 UPDATE:
++ added automatic UPS analytics (check it)
++ added database optimization
++ added UPS monitoring suspension/return
++ interface reorganized
++ fixed on-battery time calculations
++ optimizations and minor changes
+
+Feel free to ask any questions.
+
+
 Usage:
 1. Install and configure NUT hosts;
 2. Add dlls from dll if neccessary;
@@ -16,5 +27,6 @@ Usage:
 9. Check UPS info ;
 10. If something's not working, check some checks in others.\
 
-<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/NUT_webserver_main_if_08-06-18.png"/>
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/nut_ups_mon_scr_new1.PNG"/>
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/nut_ups_mon_scr_new2.PNG"/>
 
