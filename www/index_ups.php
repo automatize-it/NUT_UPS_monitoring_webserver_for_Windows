@@ -1,4 +1,4 @@
-<meta http-equiv="refresh" content="60">
+<meta http-equiv="refresh" content="120">
 
 <script type="text/javascript" src="jq/jquery.js"></script> 
 <script type="text/javascript" src="jq/jquery.tablesorter.js"></script> 
@@ -35,7 +35,7 @@
 	
 	@font-face {
 		font-family: 'Ubuntu Mono';
-		src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url('ubuntumono.woff2') format('woff2'), url('ubuntumono.woff') format('woff'), url('ubuntumono.ttf') format('truetype');
+		src: local('Ubuntu Mono'), local('UbuntuMono-Regular'), url('ubuntumono.woff') format('woff'), url('ubuntumono.ttf') format('truetype');
 		font-weight: 400;
 		font-style: normal;
 	}
@@ -126,6 +126,12 @@
 	<tbody>
 	<?php
 		
+		//to pass unavl hosts for "backend" ping
+		session_start();
+		
+		$unavlarr = array();
+		$lngarr = array();
+		$sqlpass = "mypass";
 		
 		function dtc( $data ) {
 			$output = $data;
@@ -135,7 +141,7 @@
 			echo "<script>console.log( 'Debug Objects: " . $output . "' );</script>";
 		}
 		
-		$mndb = new mysqli('localhost', 'root', 'mypass', 'ups_list');
+		$mndb = new mysqli('localhost', 'root', $sqlpass, 'ups_list');
 
 		if (!$mndb) {
 			die('Could not connect: ' . mysqli_error());
@@ -155,11 +161,14 @@
 			/* free result set */
 			$result->free();
 		}
-
+		
 		echo "<br>";
 		
 		foreach ($upsnms as $upsnm) {
 			
+			//some DBs taking a long time being bulky, lets check it and do warning if so
+			$before = microtime(true);
+
 			//echo "<br>$upsnm"; 'battery.charge','battery.voltage', 'input.voltage', 'input.frequency', 'battery.date', 'ups.load',
 			//'ups.status', 'ups.test.result'
 			$result = $mndb->query("SELECT * FROM `$upsnm` ORDER BY id DESC LIMIT 1");
@@ -169,12 +178,14 @@
 			//keys order is important!
 			$vlkeys = array('device.type','battery.voltage','battery.charge','battery.runtime', 'input.voltage', 'battery.date', 'ups.load', 'ups.status', 'ups.test.result','ts'); //'input.frequency', ,
 			
+			//handling battery date
 			$srvcbattstr = "battery.date";
 			$srvcbattval = "";
 			if ( strtotime($keyarr['battery.mfr.date']) > strtotime($keyarr['battery.date']) ) { $keyarr['battery.date'] = $keyarr['battery.mfr.date']; $srvcbattstr = "battery.mfr.date"; }
 			
 			if ( strtotime('-3 years') > strtotime($keyarr['battery.date']) ) {$keyarr['battery.date'] = "pbna";}
 			
+			//handling ups status
 			$tmpclr = "red"; if ($keyarr['ups.status'] == "OL") {$tmpclr = "green";}
 			$tmpstts = $keyarr['ups.status'];
 			
@@ -184,7 +195,7 @@
 
 			$srvcbattval = $keyarr[$srvcbattstr];
 			
-			//finding min-maxes
+			//finding min-maxes with respect to last battery change
 			if ($keyarr['battery.voltage'] != NULL && $keyarr['battery.voltage'] != "0"){
 				
 				if ($keyarr['battery.date'] != "pbna"){
@@ -212,17 +223,39 @@
 			$result = $mndb->query("SELECT MAX(`ups.load`) FROM `$upsnm`");
 			$maxl = $result->fetch_array();
 			$result->free();
-						
+			
+			//get host status if UPS data is out of date
+			$hstonln = false;
+			
+			/*	
+				lets do some sick stuff. Freak the backend!
+				Case is, we need to ping our host to see is it unavaliable completely or its
+				ups driver problem. But doing it here takes hell of time and js cannot do it at all.
+				So lets...
+			*/
+			
+			if ($tmpclr == "grey"){
+				
+				$unavlarr[] = $keyarr['device.type'];
+			}
+			
+			
 			//table begin
 			$tmp = $keyarr['battery.date'];
-			echo "<tr class=\"border_bottom\"><td class=\"maincll mncll_tar\"><b>$upsnm<a href=\"ups_additional.php?upsnm=$upsnm&btrdt=$tmp\" title=\"UPS additional data, commands and analytics\">[?]</a><span title=\"$tmpstts\" style=\"color: $tmpclr;\"\">&nbsp;&#x23FC;</span></b></td>";
+			$tmpid = $upsnm . "_1st";
+			echo "<tr class=\"border_bottom\"><td class=\"maincll mncll_tar\" id=\"$tmpid\"><b>$upsnm<a href=\"ups_additional.php?upsnm=$upsnm&btrdt=$tmp\" title=\"UPS additional data, commands and analytics\">[?]</a><span title=\"$tmpstts\" style=\"color: $tmpclr;\"\">&nbsp;&#x23FC;</span></b></td>";
 				
 			foreach ($vlkeys as $vlkey){
 				
-				//
 				if ($vlkey == "battery.voltage" || $vlkey == "battery.charge" || $vlkey == "ups.load" || $vlkey == "battery.date" || $vlkey == "ups.status" || $vlkey == "ups.test.result" || $vlkey == "battery.runtime" || $vlkey == "device.type"){
 					
-					if ($vlkey == "device.type") {echo "<td class=\"maincll maincll_l\">&nbsp;$keyarr[$vlkey]</td>";}
+					//in device.type current ups host is stored manually
+					if ($vlkey == "device.type") {
+						
+						$tmp = $keyarr['device.type'];
+						echo "<td class=\"maincll maincll_l\" id=\"$tmp\">&nbsp;$keyarr[$vlkey] ";
+						echo "</td>";
+					}
 					
 					if ($vlkey == "battery.voltage") {
 						echo "<td class=\"maincll\">";
@@ -236,7 +269,9 @@
 						echo "</td>";
 					} 
 					if ($vlkey == "battery.charge") {echo "<td class=\"maincll\">$keyarr[$vlkey]&nbsp;/&nbsp;$minbch[0]</td>";}
+					
 					if ($vlkey == "ups.load") {
+						
 						echo "<td class=\"maincll\">$keyarr[$vlkey]&nbsp;/&nbsp;";
 						if ($maxl[0] >= 80) {echo "<span style=\"background-color:#ff0000\">$maxl[0]</span>";}
 						else {echo "$maxl[0]";}
@@ -250,11 +285,12 @@
 						echo "</td>";
 					}
 					
-					 if ($vlkey == "battery.runtime") {
+					if ($vlkey == "battery.runtime") {
 						
+						//UPSs internal time prognose is VERY optimistic, must divide by two at least
 						$tmp = round(($keyarr[$vlkey]/60)/2);
 						echo "<td class=\"maincll\">~$tmp m</td>"; 
-					 }
+					}
 					
 					if ($vlkey == "battery.date") {
 						
@@ -271,7 +307,7 @@
 					if ($vlkey == "ups.test.result") {
 						
 						echo "<td class=\"maincll\">";
-						//echo "test";
+						
 						if ($keyarr[$vlkey] != NULL){
 							if ( $keyarr[$vlkey] == "Done and passed" ) { echo "<span title=\"$keyarr[$vlkey]\">OK</span>"; }
 							else { echo "<span style=\"color:red;\">$keyarr[$vlkey]</span>"; }
@@ -280,150 +316,120 @@
 						echo "</td>";
 					}
 					
+					//here we do some that must be do in backend actually. Working on it
+					//we want to see last and longest powerlosses, just FOA
 					if ($vlkey == "ups.status") {
 						
-						//echo "<td class=\"maincll\">$keyarr[$vlkey]</td>";
+						echo "<td class=\"maincll smlfnt\" title=\"please note that time accuracy depends on local data cycle and is +-30 sec at best\">";
 						
-						echo "<td class=\"maincll smlfnt\">";
+						/*
+						decided that powerloss time will be counted only on OB states without searching ending OL state.
+						havent found any possibility for NUT to signal immidiately about powerloss,
+						so all this depends only on local data collecting cycle
+						*/
 						
-						//get last AC power loss and count its duration
+						$result = $mndb->query("SELECT `id`,`ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' ORDER BY ts DESC");
 						
-						//get last OB state
-						$result = $mndb->query("SELECT `ups.status`,`ts`,`ups.test.result` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' ORDER BY ts DESC LIMIT 1");
-						$tmparr = $result->fetch_array();
+						$i = 0;
+						$tmparr = NULL;
+						$tmparr = array();
+												
+						while ($row = $result->fetch_array()){ 
+							
+							$tmparr[]=$row;
+						}
 						$result->free();
 						
-						if ($tmparr['ups.status'] != NULL){
+						$zf = 0;
+						
+						if (!empty($tmparr)){
 							
-							$upsstat = $tmparr['ups.status'];
-							$ts = $tmparr['ts'];
+							//count last OB duration
+							$i = 0;
+							$zf = sizeof($tmparr);
 							
-							$tstres = $tmparr['ups.test.result'];
+							if ($zf > 2){
+								for ($i = 0; $i < $zf; $i++){
+									
+									if ((($tmparr[$i][0])-1) > $tmparr[$i+1][0]) {break;}
+								}
+							}
 							
-							/*there may be way to do all of this by one monstrous sql query but I dunno ¯\_(ツ)_/¯*/
 							
-							//get timestamp of last OL state before last OB state
-							$result = $mndb->query("SELECT `ups.status`,`ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OL%' AND `ts` < '$ts' ORDER BY ts DESC LIMIT 1");
-							$tmparr = $result->fetch_array();
-							$result->free();
+							$tsdiff = (strtotime($tmparr[0][1]) - strtotime($tmparr[$i][1]));
+							/* 	
+							we dont know frequency of local data and there could be only one 
+							one record indicating OB, so we must add some sec and 30 looks reasonable
+							*/
+							if ($tsdiff <= 1) {$tsdiff += 30;}
 							
-							$ts = $tmparr['ts'];
+							$tsdiff = gmdate('i:s',$tsdiff);
+							$tmpts = $tmparr[$i][1];
 							
-							//get timestamp of first OB state
-							//there may be only ONE OB state so ts can be more OR EQUAL
-							$result = $mndb->query("SELECT `ups.status`,`ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' AND `ts` > '$ts' ORDER BY ts ASC LIMIT 1");
-							$tmparr = $result->fetch_array();
-							$result->free();
+							echo "$tmpts $tsdiff";
 							
-							$ts = $tmparr['ts'];
-							
-							//get timestamp of first OL state after OB state
-							$result = $mndb->query("SELECT `ups.status`,`ts` FROM `$upsnm` WHERE `ts` > '$ts' AND `ups.status` LIKE 'OL%' ORDER BY ts ASC LIMIT 1");
-							
-							$tmparr = $result->fetch_array();
-							$result->free();
-							
-							//count time between first OB state and first OL state
-							//of last AC power loss
-							$tmpss = (strtotime($tmparr['ts'])- strtotime($ts));
-							$tmstmpstr = gmdate('i:s', $tmpss);
-							
-							echo "$ts $tmstmpstr";
-							if (strpos($tstres,"progress")) {echo "<br>on slftst";}
+							//selftests are rare and kinda useless so disabled for now
+							//if (strpos($tstres,"progress")) {echo "<br>on slftst";}
 							//<br>slftst: $tstres"; //$upsstat<br>
 						}
 						else{
+							
 							echo "<span style=\"color:#ccc\" title=\"power losses not registered\">N/R</span>";
 						}
 						echo "</td>";
-						echo "<td class=\"maincll smlfnt\">";
+						echo "<td class=\"maincll smlfnt\" title=\"please note that time accuracy depends on local data cycle and is +-30 sec at best\">";
 						
-						//debug 
-						//$upsstat = NULL;
-						
-						if ($upsstat != NULL){
+						//do max OB
+						//if array has two or less elements means our last OB is one of max OBs for sure
+						if ( !empty($tmparr) && $zf > 2 ){
 							
-							/*
-							$result = $mndb->query("SELECT t1.ts,ABS(TIMESTAMPDIFF(SECOND,t1.ts,t2.ts)) AS 'secdiff' FROM `$upsnm` AS t1 JOIN `$upsnm` AS t2 on t1.id=t2.id+1 WHERE t1.`ups.status` LIKE 'OL%' AND t2.`ups.status` LIKE 'OB%' ORDER BY 2 DESC");
+							$i = 0;
+							$max=$sti=0;
+							$z=0;
 							
-							$tmparr = $result->fetch_array();
-							$result->free();
-							$tsmax = $tmparr['ts']; $onbattmax = gmdate('i:s', $tmparr['secdiff']);
-							*/
-							
-							$query = $mndb->query("SELECT `id`,`ts`,`ups.status` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' ORDER BY id ASC");
-							
-							$arrdim = 0;
-							$tmpobarr = array();
-							while($line = mysqli_fetch_array($query)){
+							//count longest OB
+							for ($i = 0; $i < $zf; $i++){
 								
-								$tmpobarr[] = $line; $arrdim++;
-							}
-							
-							//$tmpobarr = $results->fetch_array();
-							$query->free();
-							
-							//one dimensional array case means that our previously found AC loss was only one registered
-							//so just copy previous info
-							if ( $arrdim < 2 ){
-								
-								echo "$ts $tmstmpstr";
-								if (strpos($tstres,"progress")) {echo "<br>on slftst";}
-							}
-							else {
-								
-								$i = 0;
-								$tsdiff = 0;
-								$lngst = 0;
-								
-								$tmpts = $tmpobarr[$i][1];
+								//check if end of array
+								if (($i+1) == $zf){
 									
-								$result = $mndb->query("SELECT `ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OL%' AND `ts`>'$tmpts' ORDER BY ts ASC LIMIT 1");
-								$nxtts = $result->fetch_array();
-								$result->free();
-								
-								if ( (strtotime($nxtts[0]) - strtotime($tmpts)) > $tsdiff ) { 
-									
-									$tsdiff = strtotime($nxtts[0]) - strtotime($tmpts);
-									$lngst = $tmpts;
+									$tsdiff = strtotime($tmparr[$i-$z][1]) - strtotime($tmparr[$i][1]);
+									if ($tsdiff > $max) {
+										
+										$max = $tsdiff;
+										$sti = $i;
+									}
+									break;
 								}
 								
-								$i++;
-
-								while( !empty($tmpobarr[$i]) ){
+								//check if this is end of sequence
+								if ( ($tmparr[$i][0])-1 > $tmparr[$i+1][0] ) {
 									
-									if (strtotime($tmpobarr[$i][1]) < strtotime($nxtts[0])){ 
-										
-										$i++; continue;
+									$tsdiff = strtotime($tmparr[$i-$z][1]) - strtotime($tmparr[$i][1]);
+									
+									if ($tsdiff > $max) {
+									
+										$max = $tsdiff;
+										$sti = $i;
 									}
-									
-									$tmpts = $tmpobarr[$i][1];
-									
-									$result = $mndb->query("SELECT `ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OL%' AND `ts`>'$tmpts' ORDER BY ts ASC LIMIT 1");
-									$nxtts = $result->fetch_array();
-									$result->free();
-									
-									if ( (strtotime($nxtts[0]) - strtotime($tmpts)) > $tsdiff ) { 
-										
-										$tsdiff = strtotime($nxtts[0]) - strtotime($tmpts);
-										$lngst = $tmpts;
-									}
-									
-									$i++;
-									
+									$z = 0;
+									continue;
 								}
-								
-								$tsdiff = gmdate('i:s', $tsdiff);
-								
-								echo "$lngst $tsdiff";
+								$z++;
 							}
 							
-							$upsstat = NULL;
+							$tsdiff = gmdate('i:s',$max);
+							$tmpts = $tmparr[$sti][1];
+							
+							echo "$tmpts $tsdiff";							
 						}
 						else{
-							echo "<span style=\"color:#ccc\" title=\"power losses not registered\">N/R</span>";
+							
+							if(empty($tmparr)) {echo "<span style=\"color:#ccc\" title=\"power losses not registered\">N/R</span>";}
+							else {echo "$tmpts $tsdiff";}
 						}
 						
+						$tmparr['ups.status'] = NULL;
 						echo "</td>";
 					}
 				}
@@ -433,6 +439,11 @@
 				}
 			}
 			
+			/*******************************************************************************************************
+			bad idea, do drop table and other sensitive stuf from html with only standard warning. 
+			Go do it manually you lazy human
+			********************************************************************************************************/
+			
 			/*			
 			if ($keyarr['ups.test.result'] != NULL) {echo "<td class=\"maincll\"><form title=\"Run UPS self-test immidiately\" style=\"margin: auto;\" method=\"get\" onsubmit=\"return confirm('Self-test can also FAIL. Do anyway?');\"><button type=\"submit\" formaction=\"ups_self_test.php\" name=\"tstups\" value=\"$upsnm\">SLFTST</button></form>";}
 			else {echo "<td class=\"maincll\"><span style=\"color:#ccc\" title=\"self-test on demand not available\">N/A</span>";}
@@ -441,58 +452,57 @@
 			echo ("<td class=\"maincll\">");
 			echo ("<a href=\"ups_sspnd.php?upsnm=$upsnm\" onClick=\"return confirm('Sure?')\" title=\"suspend ups monitoring\"><span style=\"color:#0033cc\">[SZ]</span></a>&nbsp;");
 			echo ("<a href=\"ups_cldb_dlg.php?upsdb=$upsnm\" title=\"optimize ups database\"><span style=\"color:#ff9900\">[DBO]</span></a>&nbsp;");	
-			//bad idea, do drop table from html with only standard warning. Go do it manually you lazy human
+			
 			//echo ("<a href=\"\" title=\"DELETE UPS MONITORING AND DATA\"><span style=\"color:red\">[X]</span></a>");
 			echo("</td></tr>");
 			*/
 						
 			//echo "<tr><td colspan=\"10\"><hr width=\"85%\"></td></tr>";
+			
+			$after = microtime(true);
+			
+			if (($after-$before) > 0.2 ){ $lngarr[] = $tmpid; }
 		}
 		
 		mysqli_close($mndb);
+		
+		//sickstuff step 2
+		$_SESSION['hstarr'] = $unavlarr;
 	?>
 	</tbody>
 	
 	</table>
 	<br>
+	<div align="center" id="hststt">Now checking hosts availability...</div>
 	<div align="center"><a href="http://localhost/ups_sspndd_lst.php">suspended UPSs</a></div>
 	
+	<!-- aaaaaand there is sickstuff step 3 -->
+	<iframe style="display:none; visibility:hidden;" src="ping.php"></iframe>
+	
 	<script type="text/javascript">
-	$(document).ready(function() 
-    { 
-       $("table").tablesorter({ 
-        // sort on the first column and third column, order asc 
-        sortList: [[11,1],[0,0]] 
-    });
-    } 
-	);
+		$(document).ready(function() 
+		{ 
+		   $("table").tablesorter({ 
+			// sort on the first column and third column, order asc 
+			sortList: [[11,1],[0,0]] 
+		});
+		} 
+		);
 	</script>
 	
-	<!--
-	<div class="wrapper">
-		<div class="upsstr hdr">
-			<div class="upsstrblck">NAME</div>
-			<div class="upsstrblck">VOLTAGE</div>
-			<div class="upsstrblck">STATUS</div>
-			<div class="upsstrblck">CURR LOAD</div>
-			<div class="upsstrblck">BATTERY %</div>
-			<div class="upsstrblck">SLF-TST STAT</div>
-		</div>
+	<script type="text/javascript">
 		
-		<div class="upsstr">
-			<div class="upsstrblck"><b>S4 Powercom 535</b></div>
-			<div class="upsstrblck">220V</div>
-			<div class="upsstrblck">ON-LINE</div>
-			<div class="upsstrblck">5 %</div>
-			<div class="upsstrblck">100 %</div>
-			<div class="upsstrblck">PASSED</div>			
-			<div class="upsstrblck"><button>SELF-TEST</div>
-		</div>
+		var lng_amnt = <?php echo sizeof($lngarr); ?>;
+		if (lng_amnt > 0){
+			
+			let alrtstr = "<span style=\"color:orange;\" title=\"handling this UPS DB takes a long time. May want to optimize it\"> ! </span>"
+			let arr = "<?php echo implode(',',$lngarr); ?>";
+			arr = arr.split(',');
+			
+			arr.forEach(function (id){
+				
+				document.getElementById(id).innerHTML += alrtstr;
+			});
+		}
 		
-		<hr width="720">
-		<div class="upsstr">
-		<div class="upsstrblck"><b>UPS2</b></div><div class="upsstrblck">221V</div><div class="upsstrblck">ON-BATTvfdsfdsfasdf</div>
-		<div class="upsstrblck"><button>SELF-TEST</div>
-		</div>
-	</div>
-	-->
+	</script>
