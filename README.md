@@ -4,6 +4,14 @@ Web server for Network UPS Tools (UPS) https://networkupstools.org/ Windows vers
 
 NUT monitoring UPS in local network. Just monitoring yet.
 
+05.2020 UPDATE:
+Still alive!
++ major web-interface speed improvements
++ re-work on-battery time calculations
++ DBs performance checker
++ some php "backend"
++ optimizations and minor changes
+
 08.2019 UPDATE:
 + added automatic UPS analytics (check it)
 + added database optimization
