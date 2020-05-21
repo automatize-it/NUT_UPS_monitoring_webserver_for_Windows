@@ -7,11 +7,12 @@ SET KEYS=id,ts,
 SET RAWDATA=
 SET UPSNOTOL=0
 SET BMFRD=0
+SET SQLPASS=yourpass
 
 :: GET HOSTNAME
 FOR /f "tokens=2 delims=@" %%H IN ('ECHO %UPSNAME%') DO SET HOSTNAME=%%H
 
-::IF HAVE ANY NON-NUT-COMPATIBLE UPSS, THEY GO HERE, LIST MUST BE IN NUTUNCAP.TXT
+::IF HAVE ANY NON-NUT-COMPATIBLE UPSS, THEY GO HERE
 find "%UPSNAME%" nutuncap.txt>NUL
 IF %ERRORLEVEL% EQU 0 (
 	
@@ -57,12 +58,12 @@ SET RAWDATA=NULL,now(),%RAWDATA%
 
 SET QRY=INSERT INTO `%UPSNAME%` (%KEYS%) VALUES (%RAWDATA%);
 
-mysql.exe -e "%QRY%" -h 127.0.0.1 --user=root --password=mypass ups_list
+mysql.exe -e "%QRY%" -h 127.0.0.1 --user=root --password=%SQLPASS% ups_list
 IF %UPSNOTOL% NEQ 0 EXIT 12
 exit 0
 
 :HOSTUNAVLBL
-::WATCH OUT LANGUAGE. CHANGE ms TO YOUR LANGUAGE
-ping -n 2 -w 100 %HOSTNAME% | find "мс"
-IF %ERRORLEVEL%==0 exit 11
-exit 0
+REM ping -n 2 -w 100 %HOSTNAME% | find "мс"
+rem ECHO %ERRORLEVEL%
+REM IF %ERRORLEVEL%==0 exit 11
+exit 11

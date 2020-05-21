@@ -1,3 +1,5 @@
+<link rel="shortcut icon" type="image/png" href="nutmon16.ico"/>
+
 <meta http-equiv="refresh" content="120">
 
 <script type="text/javascript" src="jq/jquery.js"></script> 
@@ -131,7 +133,7 @@
 		
 		$unavlarr = array();
 		$lngarr = array();
-		$sqlpass = "mypass";
+		$sqlpass = "yourpass";
 		
 		function dtc( $data ) {
 			$output = $data;
@@ -166,7 +168,7 @@
 		
 		foreach ($upsnms as $upsnm) {
 			
-			//some DBs taking a long time being bulky, lets check it and do warning if so
+			//dtc($upsnm);
 			$before = microtime(true);
 
 			//echo "<br>$upsnm"; 'battery.charge','battery.voltage', 'input.voltage', 'input.frequency', 'battery.date', 'ups.load',
@@ -191,7 +193,8 @@
 			
 			if ( $keyarr['ups.status'] == "OB DISCHRG")	{$tmpclr = "#FFA500";}
 			if ( $keyarr['ups.status'] == "OL CHRG")	{$tmpclr = "lime";}
-			if (strtotime($keyarr['ts']) < strtotime('-10 min')){ $tmpclr = "grey"; $tmpstts .= " (not actual)";}
+						
+			if ( strtotime($keyarr['ts']) < strtotime('-3 min')){ $tmpclr = "grey"; $tmpstts .= " (not actual)";}
 
 			$srvcbattval = $keyarr[$srvcbattstr];
 			
@@ -289,7 +292,11 @@
 						
 						//UPSs internal time prognose is VERY optimistic, must divide by two at least
 						$tmp = round(($keyarr[$vlkey]/60)/2);
-						echo "<td class=\"maincll\">~$tmp m</td>"; 
+						if ($tmp > 30){
+							echo "<td class=\"maincll\"><span style=\"color:red;\" title=\"Internal UPSs OBP time is inadequate. Common value is 10-15 min MAX. Check UPS load and power loss max.\">~$tmp m</td>";
+						}
+						else {echo "<td class=\"maincll\">~$tmp m</td>";}
+						
 					}
 					
 					if ($vlkey == "battery.date") {
@@ -320,14 +327,10 @@
 					//we want to see last and longest powerlosses, just FOA
 					if ($vlkey == "ups.status") {
 						
+						$tsdiff = 0;
+						
 						echo "<td class=\"maincll smlfnt\" title=\"please note that time accuracy depends on local data cycle and is +-30 sec at best\">";
-						
-						/*
-						decided that powerloss time will be counted only on OB states without searching ending OL state.
-						havent found any possibility for NUT to signal immidiately about powerloss,
-						so all this depends only on local data collecting cycle
-						*/
-						
+												
 						$result = $mndb->query("SELECT `id`,`ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' ORDER BY ts DESC");
 						
 						$i = 0;
@@ -355,8 +358,15 @@
 								}
 							}
 							
+							$tmptm = $tmparr[$i][0];
+							$result = $mndb->query("SELECT `ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OL%' AND `id` > $tmptm LIMIT 1");
+							$nxtoltm = $result->fetch_array();
+							$result->free();
 							
-							$tsdiff = (strtotime($tmparr[0][1]) - strtotime($tmparr[$i][1]));
+							//var_dump($nxtoltm[0]);
+							
+							
+							$tsdiff = (strtotime($nxtoltm[0]) - strtotime($tmparr[$i][1]));
 							/* 	
 							we dont know frequency of local data and there could be only one 
 							one record indicating OB, so we must add some sec and 30 looks reasonable
@@ -383,9 +393,11 @@
 						//if array has two or less elements means our last OB is one of max OBs for sure
 						if ( !empty($tmparr) && $zf > 2 ){
 							
+							//count max OB duration
 							$i = 0;
 							$max=$sti=0;
-							$z=0;
+							$z=$maxz=0;
+							$tsdiff = 0;
 							
 							//count longest OB
 							for ($i = 0; $i < $zf; $i++){
@@ -398,11 +410,11 @@
 										
 										$max = $tsdiff;
 										$sti = $i;
+										$maxz = $z;
 									}
 									break;
 								}
 								
-								//check if this is end of sequence
 								if ( ($tmparr[$i][0])-1 > $tmparr[$i+1][0] ) {
 									
 									$tsdiff = strtotime($tmparr[$i-$z][1]) - strtotime($tmparr[$i][1]);
@@ -411,17 +423,31 @@
 									
 										$max = $tsdiff;
 										$sti = $i;
+										$maxz = $z;
 									}
 									$z = 0;
 									continue;
 								}
 								$z++;
 							}
+								
+							$tmptm = $tmparr[($sti)][0];
+							$result = $mndb->query("SELECT `ts` FROM `$upsnm` WHERE `ups.status` LIKE 'OL%' AND `id` > $tmptm LIMIT 1");
+							$nxtoltm = $result->fetch_array();
+							$result->free();
+						
+							$max = strtotime($nxtoltm[0]) - strtotime($tmparr[$sti][1]);
+							
+							if ($max <= 1) {$max += 30;}
 							
 							$tsdiff = gmdate('i:s',$max);
 							$tmpts = $tmparr[$sti][1];
 							
-							echo "$tmpts $tsdiff";							
+							if ($max > 900){
+								
+								echo "<span style=\"color:red;\" title=\"MAX OB time is loo long. It may indicate several problems. Check it!\">$tmpts $tsdiff</span>";
+							}
+							else {echo "$tmpts $tsdiff";}							
 						}
 						else{
 							
@@ -461,7 +487,8 @@
 			
 			$after = microtime(true);
 			
-			if (($after-$before) > 0.2 ){ $lngarr[] = $tmpid; }
+			if (($after-$before) > 0.3 ){ $lngarr[] = $tmpid; }
+			//dtc(($after-$before));
 		}
 		
 		mysqli_close($mndb);
