@@ -2,6 +2,9 @@
 SETLOCAL ENABLEDELAYEDEXPANSION
 
 SET UPSNAME=%1
+
+IF [%1]==[] SET /P UPSNAME=
+
 SET HOSTNAME=
 SET KEYS=id,ts,
 SET RAWDATA=
@@ -33,11 +36,6 @@ IF %ERRORLEVEL% EQU 0 (
 	goto :NXT
 )
 
-:: CHECK FOR HOST AVAILABILITY
-etimeout 2000 bin\upsc %UPSNAME% ups.status
-IF %ERRORLEVEL% NEQ 0 GOTO :HOSTUNAVLBL 
-
-:: HOST AVAILABLE, GET INFO
 SET SCR=bin\upsc %UPSNAME%
 for /f "tokens=1,2 delims=:" %%I IN ('%SCR%') DO (
 	
@@ -59,11 +57,5 @@ SET RAWDATA=NULL,now(),%RAWDATA%
 SET QRY=INSERT INTO `%UPSNAME%` (%KEYS%) VALUES (%RAWDATA%);
 
 mysql.exe -e "%QRY%" -h 127.0.0.1 --user=upsmonW --password=%SQLPASS% ups_list
-IF %UPSNOTOL% NEQ 0 EXIT 12
-exit 0
 
-:HOSTUNAVLBL
-REM ping -n 2 -w 100 %HOSTNAME% | find "мс"
-rem ECHO %ERRORLEVEL%
-REM IF %ERRORLEVEL%==0 exit 11
-exit 11
+cmd /k

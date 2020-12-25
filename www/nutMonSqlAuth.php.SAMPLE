@@ -1,0 +1,47 @@
+<?php
+	
+	function nutMonSqlAuth($rw){
+		
+		$sqlSrv = 'yourhost';
+		$sqlUsr = 'yourname';
+		$sqlPass = "yourpass";
+		
+		if ($rw == 'W'){
+			
+			$sqlUsr = '';
+			$sqlPass = "";
+		}
+		
+		if ($rw == 'ROOT'){
+			
+			$sqlUsr = '';
+			$sqlPass = "";
+		}
+		
+		return (new mysqli($sqlSrv, $sqlUsr , $sqlPass, 'ups_list'));
+	}
+	
+	//when I was! A young coder! My father! Took me into the code! And hit me in my face!
+	//He said: "One day! I'll die cause you're not KISSing!"
+	//(no parental abuse, just joke)
+	function nutMonSqlAuthEnh($rw,$sqlBase){
+		
+		$sqlSrv = '';
+		$sqlUsr = '';
+		$sqlPass = "";
+		
+		if ($rw == 'W'){
+			
+			$sqlUsr = '';
+			$sqlPass = "";
+		}
+		
+		if ($rw == 'ROOT'){
+			
+			$sqlUsr = '';
+			$sqlPass = "";
+		}
+		
+		return (new mysqli($sqlSrv, $sqlUsr , $sqlPass, $sqlBase));
+	}
+?>

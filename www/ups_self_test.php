@@ -16,8 +16,13 @@
 	} 
 	
 	sleep(1);
-	$cmdstr = "get_remote_ups_data.cmd $ups";
+	$cmdstr = "C:\NUT\get_remote_ups_data.cmd $ups";
 	exec($cmdstr, $cmdout);
-		
-	echo "<meta http-equiv=\"refresh\" content=\"1; url=http://localhost/index_ups.php\">";
+	
+	//sleep(10);
+	
+	//$cmdstr = "C:\NUT\get_remote_ups_data.cmd $ups";
+	//exec($cmdstr, $cmdout);
+	
+	echo "<meta http-equiv=\"refresh\" content=\"1; url=index.php\">";
 ?>
