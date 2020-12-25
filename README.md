@@ -35,6 +35,8 @@ Usage:
 9. Check UPS info ;
 10. If something's not working, check some checks in others.\
 
-<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/nut_ups_mon_scr_new1.PNG"/>
-<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/nut_ups_mon_scr_new2.PNG"/>
-
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/Main_screen.png"/>
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/Suspended_upss.png"/>
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/Ups_Info.png"/>
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/Opt_db.png"/>
+<img src="https://raw.githubusercontent.com/automatize-it/NUT_UPS_monitoring_webserver_for_Windows/master/scrshts/batt_date.png"/>
