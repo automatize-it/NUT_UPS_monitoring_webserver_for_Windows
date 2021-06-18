@@ -4,6 +4,14 @@ Web server for Network UPS Tools (UPS) https://networkupstools.org/ Windows vers
 
 NUT monitoring UPS in local network. Just monitoring yet.
 
+06.2021 UPDATE:
++ shell scripts
++ on-battery last start value parameter added
+V less DB usage with getUpsDataEnh.sh
+V nicer authorization
+V small fixes and improvements
+! looking for someone to add http authorization, docker it all, and to make client installations less handy
+
 05.2020 UPDATE:
 Still alive!
 + major web-interface speed improvements
