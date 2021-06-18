@@ -25,7 +25,7 @@ Keys: upsnm,btrdt
 	$btrdt = $_GET['btrdt'];
 	
 	$mndb = nutMonSqlAuth('R');
-
+	
 	if (!$mndb) {
 		die('Could not connect: ' . mysqli_error());
 	}
@@ -34,10 +34,11 @@ Keys: upsnm,btrdt
 	$upsnmdt = $result->fetch_array();
 	$result->free();
 	
-	$result = $mndb->query("SELECT `$ups`.`ups.load`,COUNT(*) FROM `$ups` WHERE `$ups`.`ups.load`>50");
+	//`$ups`. `$ups`.
+	$result = $mndb->query("SELECT `ups.load`,COUNT(*) FROM `$ups` WHERE `ups.load`>50 GROUP BY `ups.load`");
 	$maxlcnt = $result->fetch_array();
 	$result->free();
-	
+		
 	$result = $mndb->query("SELECT `ups.status`,`ts`,`ups.test.result` FROM `$ups` WHERE `ups.status` LIKE 'OB%' ORDER BY ts DESC LIMIT 1");
 	$plarr = $result->fetch_array();
 	$result->free();
@@ -56,11 +57,11 @@ Keys: upsnm,btrdt
 	$tstarr = $result->fetch_array();
 	$result->free();
 	
-	$result = $mndb->query("SELECT `$ups`.`ups.load`,COUNT(*) FROM `$ups`");
+	$result = $mndb->query("SELECT `$ups`.`ups.load`,COUNT(*) FROM `$ups` GROUP BY `ups.load`");
 	$uld = $result->fetch_array();
 	$result->free();
 	
-	$result = $mndb->query("SELECT `$ups`.`ups.load`,COUNT(*) FROM `$ups` WHERE `$ups`.`ups.load`=0");
+	$result = $mndb->query("SELECT `$ups`.`ups.load`,COUNT(*) FROM `$ups` WHERE `$ups`.`ups.load`=0 GROUP BY `ups.load`");
 	$uldz = $result->fetch_array();
 	$result->free();
 	
@@ -76,7 +77,6 @@ Keys: upsnm,btrdt
 	$result = $mndb->query("SELECT `$ups`.`battery.runtime` FROM `$ups` WHERE `$ups`.`ts`>$onbatt1stts");
 	if( is_array($result) ) {$btrntmarr = $result->fetch_array();} 
 	$result->free();
-	
 	
 	$ivamnt = 11;
 	if ($ivarr != NULL) {$ivamnt = $uld[1]/sizeof($ivarr);}
@@ -149,7 +149,6 @@ Keys: upsnm,btrdt
 	}
 	*/
 	
-	
 	//battery runtime calculation check
 	$minobttm = 600;
 	$maxobttm = 3600;
@@ -166,6 +165,8 @@ Keys: upsnm,btrdt
 	//$ivamnt = 2;
 	//$btrchng = 2;
 	//$dtamnt = 0;
+	
+	
 	
 	echo "<h1>UPS $upsnmdt[1] $upsnmdt[2] $ups</h1>";
 	

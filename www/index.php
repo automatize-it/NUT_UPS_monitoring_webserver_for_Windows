@@ -1,5 +1,5 @@
 <link rel="shortcut icon" type="image/png" href="nutmon16.ico"/>
-
+<meta charset="UTF-8">
 <meta http-equiv="refresh" content="120">
 
 <script type="text/javascript" src="jq/jquery.js"></script> 
@@ -169,7 +169,7 @@
 		if (!$mndb) {
 			die('Could not connect: ' . mysqli_error());
 		}
-				
+	
 		$upsnms = array();
 		
 		$nastr = "<span style=\"color:#ccc\" title=\"data type not provided\">N/A</span>";
@@ -232,6 +232,7 @@
 			else {
 				
 				$battYears = round((strtotime('now') - strtotime($keyarr['battery.mfr.date']))/31536000,1);
+				if ($battYears < 1) $battYears = 1;
 			}
 			
 			//handling ups status
@@ -397,17 +398,17 @@
 						echo "</td>";
 					}
 					
-					if ($vlkey == "ups.test.result") {
+					// if ($vlkey == "ups.test.result") {
 						
-						echo "<td class=\"maincll\">";
+						// echo "<td class=\"maincll\">";
 						
-						if ($keyarr[$vlkey] != NULL){
-							if ( $keyarr[$vlkey] == "Done and passed" ) { echo "<span title=\"$keyarr[$vlkey]\">OK</span>"; }
-							else { echo "<span style=\"color:red;\">$keyarr[$vlkey]</span>"; }
-						}
-						else {echo $nastr;}
-						echo "</td>";
-					}
+						// if ($keyarr[$vlkey] != NULL){
+							// if ( $keyarr[$vlkey] == "Done and passed" ) { echo "<span title=\"$keyarr[$vlkey]\">OK</span>"; }
+							// else { echo "<span style=\"color:red;\">$keyarr[$vlkey]</span>"; }
+						// }
+						// else {echo $nastr;}
+						// echo "</td>";
+					// }
 					
 					//here we do some that must be do in backend actually. Working on it
 					//we want to see last and longest powerlosses, just FOA
@@ -607,7 +608,7 @@
 			
 			$after = microtime(true);
 			
-			if (($after-$before) > 0.3 ){ $lngarr[] = $tmpid; }
+			if (($after-$before) > 0.5 ){ $lngarr[] = $tmpid; }
 			//dtc(($after-$before));
 		}
 		
