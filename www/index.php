@@ -1,6 +1,6 @@
-<link rel="shortcut icon" type="image/png" href="nutmon16.ico"/>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="120">
+﻿<link rel="shortcut icon" type="image/png" href="nutmon16.ico"/>
+<meta http-equiv="content-type" content="text/html; charset=utf-8"/> 
+<meta http-equiv="refresh" content="120"/>
 
 <script type="text/javascript" src="jq/jquery.js"></script> 
 <script type="text/javascript" src="jq/jquery.tablesorter.js"></script> 
@@ -313,7 +313,7 @@
 			$tmpid = $upsnm . "_1st";
 			echo "<tr class=\"border_bottom\"><td class=\"maincll mncll_tar\" id=\"$tmpid\"><b><a href=\"upsAdditional.php?upsnm=$upsnm&btrdt=$tmp\" title=\"&#9881;&#65039; UPS additional data, commands and analytics\">";
 			echo strtoupper($upsNmShrt);
-			echo "</a><span title=\"$tmpstts\" style=\"color: $tmpclr;\"\">&nbsp;&#x23FC;</span></b></td>";
+			echo "</a><span title=\"$tmpstts\" style=\"color: $tmpclr;\"\">&nbsp;⏼</span></b></td>";
 				
 			foreach ($vlkeys as $vlkey){
 				
@@ -416,13 +416,21 @@
 					if ($vlkey == "ups.status") {
 						
 						$tsdiff = 0;
-												
-						$result = $mndb->query("SELECT `id`,`ts`,`battery.charge` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' ORDER BY ts DESC");
+						$tmpBattDate = $keyarr['battery.date'];
+						
+						if ($tmpBattDate == "pbna") {
+							
+							$result = $mndb->query("SELECT `id`,`ts`,`battery.charge` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' ORDER BY ts DESC");
+						}
+						else {
+							
+							$result = $mndb->query("SELECT `id`,`ts`,`battery.charge` FROM `$upsnm` WHERE `ups.status` LIKE 'OB%' AND `battery.mfr.date` LIKE '$tmpBattDate' ORDER BY ts DESC");
+						}
 						
 						$i = 0;
 						$tmparr = NULL;
 						$tmparr = array();
-												
+
 						while ($row = $result->fetch_array()){ 
 							
 							$tmparr[]=$row;
@@ -430,6 +438,8 @@
 						$result->free();
 						
 						$zf = 0;
+						$lastObStartBatt = NULL;
+						$lastObLoad = NULL;
 						
 						if (!empty($tmparr)){
 							
@@ -459,12 +469,29 @@
 							$battDischTime = strtotime($tmparr[0][1]) - strtotime($tmparr[$i][1]);
 							
 							//get first battery charge on last powerloss, very informative
-							$result = $mndb->query("SELECT `battery.charge` FROM `$upsnm` WHERE `id` LIKE $tmptm");
+							$result = $mndb->query("SELECT `battery.charge`,`ups.load` FROM `$upsnm` WHERE `id` LIKE $tmptm");
 							$tmp = $result->fetch_array();
 							$result->free();
 							
 							$lastObStartBatt = $tmp[0];
+							$lastObLoad = $tmp[1];
 							
+							while ($tmp[0] == 100){
+								
+								$tmptm+=1;
+								$result = $mndb->query("SELECT `battery.charge`,`ups.load` FROM `$upsnm` WHERE `id` LIKE $tmptm");
+								$tmp = $result->fetch_array();
+								$result->free();
+
+								if ($tmp[0] == NULL) {break;}
+
+								if ($tmp[0] != 100){
+									
+									$lastObStartBatt = $tmp[0];
+									$lastObLoad = $tmp[1];
+									break;
+								}
+							}
 							//we dont know frequency of local data and there could be only one 
 							//one record indicating OB, so we must add some sec and 30 looks reasonable
 							
@@ -479,10 +506,9 @@
 						}
 						else{
 							
-							echo "<span style=\"color:#ccc\" title=\"power losses not registered\">N/R</span>";
+							echo "<td class=\"maincll smlfnt\"><span style=\"color:#ccc\" title=\"power losses not registered\">N/R</span>";
 						}
 						echo "</td>";
-						
 						
 						echo "<td class=\"maincll smlfnt\" title=\"please note that time accuracy depends on local data cycle and is +-30 sec at best\">";
 						
@@ -555,18 +581,26 @@
 							else {echo "<span title=\"$tmpts\">$tsdiff</span>";}
 						}
 						
-						$tmparr['ups.status'] = NULL;
 						echo "</td>";
 						
 						//do last start battery charge value on OB
-						if ($lastObStartBatt < 70) {$tmpClr = "#b3b300";}
-						if ($lastObStartBatt < 41) {$tmpClr = "red";}
-						
-						echo "<td class=\"maincll\">";
-						
-						if ( isset($tmpClr) ) {echo "<span style=\"color:$tmpClr\" title=\"start OB battery charge value is low. It may indicate that battery is old\">$lastObStartBatt</span>"; unset($tmpClr);}
-						else {echo "$lastObStartBatt";} 
+						if(empty($tmparr)) {
+							
+							echo "<td class=\"maincll smlfnt\"><span style=\"color:#ccc\" title=\"power losses not registered\">N/R</span>";
+						}
+						else {
+							
+							if ($lastObStartBatt < 70) {$tmpClr = "#b3b300";}
+							if ($lastObStartBatt < 41) {$tmpClr = "red";}
+							
+							echo "<td class=\"maincll\">";
+							
+							if ( isset($tmpClr) ) {echo "<span style=\"color:$tmpClr\" title=\"start OB battery charge value is low. It may indicate that battery is old\">$lastObStartBatt<br><small>$lastObLoad% load</small></span>"; unset($tmpClr);}
+							else {echo "$lastObStartBatt<br><small>$lastObLoad% load</small>";} 
+						}
 						echo "</td>";
+						
+						$tmparr['ups.status'] = NULL;
 						
 						if ($battDischTime > 90){
 							$predictedTime = round($battDischPrc / ($battDischTime/60), 2);
