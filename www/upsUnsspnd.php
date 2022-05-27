@@ -4,7 +4,7 @@
 	
 	$upsnm = $_GET['upsnm'];
 	
-	$mndb2 = nutMonSqlAuth('ROOT');
+	$mndb2 = nutMonSqlAuthEnh('ROOT');
 
 	if (!$mndb2) {
 		die('Could not connect: ' . mysqli_error());

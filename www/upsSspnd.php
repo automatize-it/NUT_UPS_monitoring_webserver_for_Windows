@@ -4,13 +4,13 @@
 	
 	$upsnm = $_GET['upsnm'];
 	
-	$mndb2 = nutMonSqlAuth('ROOT');
+	$mndb2 = nutMonSqlAuthEnh('W','ups_sspndd');
 
 	if (!$mndb2) {
 		die('Could not connect: ' . mysqli_error());
 	}
 	
-	if ($result = $mndb2->query("RENAME TABLE `ups_list`.`$upsnm` TO `suspndd_upss`.`$upsnm`",  MYSQLI_USE_RESULT)){ 
+	if ($result = $mndb2->query("RENAME TABLE `ups_list`.`$upsnm` TO `ups_sspndd`.`$upsnm`",  MYSQLI_USE_RESULT)){ 
 		
 		echo "Operation code: $result <br>";
 		echo "UPS \"$upsnm\" monitoring and data suspended";
@@ -23,6 +23,6 @@
 	//mysqli_free_result($result);
 	mysqli_close($mndb2);
 	
-	if ($result == 1) {echo "<meta http-equiv=\"refresh\" content=\"2; url=http://localhost/nutupsmon/index.php\">";}
+	if ($result == 1) {echo "<meta http-equiv=\"refresh\" content=\"2; url=index.php\">";}
 	
 ?>

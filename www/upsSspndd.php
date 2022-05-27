@@ -132,8 +132,9 @@
 
 			echo "<script>console.log( 'Debug Objects: " . $output . "' );</script>";
 		}
+		//dtc('oneone');
 		
-		$mndb = nutMonSqlAuthEnh('W','suspndd_upss');
+		$mndb = nutMonSqlAuthEnh('R','ups_sspndd');
 
 		if (!$mndb) {
 			die('Could not connect: ' . mysqli_error());
@@ -141,7 +142,7 @@
 				
 		$upsnms = array();
 
-		if ($result = $mndb->query("SELECT table_name FROM information_schema.tables WHERE table_schema='suspndd_upss'")){
+		if ($result = $mndb->query("SELECT table_name FROM information_schema.tables WHERE table_schema='ups_sspndd'")){
 
 			while ($row = $result->fetch_array()){ 
 					
@@ -151,13 +152,13 @@
 			/* free result set */
 			$result->free();
 		}
-		
-		dtc($upsnms);
+		//dtc('heyyou');
+		dtc($upsnms[0]);
 		
 		foreach ($upsnms as $upsnm) {
 			
 			//SQL part
-			$result = $mndb->query("SELECT * FROM `$upsnm` ORDER BY id DESC LIMIT 1");
+			$result = $mndb->query("SELECT * FROM `ups_sspndd`.`$upsnm` ORDER BY id DESC LIMIT 1");
 			$keyarr = $result->fetch_assoc();
 			$result->free();
 			

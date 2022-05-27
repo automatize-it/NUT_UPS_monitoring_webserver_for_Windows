@@ -415,6 +415,15 @@
 					
 					if ($vlkey == "ups.status") {
 						
+						if ( substr( $keyarr['ups.status'], 0, 2 ) === "OB") {
+							
+							for ($ii = 0; $ii < 4; $ii++) {
+								echo "<td class=\"maincll smlfnt\"><span style=\"color:#FF0000\">in progress</span>";
+							}
+							continue;
+						}
+						//
+						
 						$tsdiff = 0;
 						$tmpBattDate = $keyarr['battery.date'];
 						
@@ -440,6 +449,7 @@
 						$zf = 0;
 						$lastObStartBatt = NULL;
 						$lastObLoad = NULL;
+						$battDischTime = NULL;
 						
 						if (!empty($tmparr)){
 							
@@ -603,7 +613,9 @@
 						$tmparr['ups.status'] = NULL;
 						
 						if ($battDischTime > 90){
+							
 							$predictedTime = round($battDischPrc / ($battDischTime/60), 2);
+							
 							if ($predictedTime > 0) {
 								$prt2 = round( $lastObStartBatt / $predictedTime,0);
 								if ($battYears > 1){$prt2 = round( $prt2 / $battYears,0);}
